@@ -1,0 +1,44 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: homer-dashboard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: homer-dashboard
+  template:
+    metadata:
+      labels:
+        app: homer-dashboard
+    spec:
+      containers:
+        - name: homer-dashboard
+          image: b4bz/homer:v24.10.2
+          ports:
+            - name: dashboard
+              containerPort: 8080
+          volumeMounts:
+            - name: assets
+              mountPath: /www/assets
+              readOnly: true
+
+      initContainers:
+        # Copy the files from the repo into the PVC
+        - name: init-homer
+          image: alpine:3.20.3
+          volumeMounts:
+            - name: assets
+              mountPath: /assets
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              apk add --no-cache git
+              git clone https://github.com/cleroux-dev-homelab/homer-dashboard.git --depth 1
+              cp -a homer-dashboard/assets/. /assets
+
+      volumes:
+        - name: assets
+          persistentVolumeClaim:
+            claimName: homer-dashboard
